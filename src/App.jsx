@@ -390,22 +390,28 @@ function App() {
               {!showPokemonMenu ? (
                 <>
                   <p>Choose your snake head:</p>
-                  <button 
-                    onClick={() => setShowPokemonMenu(true)} 
-                    className="restart-button"
-                    style={{marginBottom: '10px'}}
-                  >
-                    {selectedPokemon.svgData ? (
-                      <><img src={selectedPokemon.svgData} alt={selectedPokemon.name} style={{width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px'}} /> {selectedPokemon.name}</>
-                    ) : (
-                      <>{selectedPokemon.emoji} {selectedPokemon.name}</>
-                    )}
-                  </button>
-                  <br />
-                  <button onClick={resetGame} className="restart-button" style={{marginTop: '15px'}}>
-                    Start Game
-                  </button>
-                  <p className="controls">Arrow keys to move • SPACE to pause</p>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '300px', alignItems: 'stretch', margin: '0 auto'}}>
+                    <button 
+                      onClick={() => setShowPokemonMenu(true)} 
+                      className="restart-button"
+                    >
+                      {selectedPokemon.svgData ? (
+                        <><img src={selectedPokemon.svgData} alt={selectedPokemon.name} style={{width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px'}} /> {selectedPokemon.name}</>
+                      ) : (
+                        <>{selectedPokemon.emoji} {selectedPokemon.name}</>
+                      )}
+                    </button>
+                    <button onClick={resetGame} className="restart-button">
+                      Start Game
+                    </button>
+                    <button 
+                      onClick={() => setShowLeaderboard(true)}
+                      className="restart-button"
+                    >
+                      🏆 View Leaderboard
+                    </button>
+                  </div>
+                  <p className="controls" style={{marginTop: '15px'}}>Arrow keys to move • SPACE to pause</p>
                 </>
               ) : null}
             </div>
@@ -426,7 +432,7 @@ function App() {
           <div className="overlay">
             <div className="message">
               <h2>Game Over!</h2>
-              <p>Final Score: {score}</p>
+              <p style={{fontSize: '1.2rem', marginBottom: '20px'}}>Final Score: {score}</p>
               <input
                 type="text"
                 placeholder="Enter your name"
@@ -435,39 +441,38 @@ function App() {
                 className="name-input"
                 maxLength={15}
               />
-              <button 
-                onClick={() => {
-                  saveScoreToLeaderboard(playerName, score);
-                  setPlayerName('');
-                  setShowLeaderboard(true);
-                }}
-                className="restart-button"
-                style={{marginTop: '10px'}}
-              >
-                Save Score
-              </button>
-              <button onClick={resetGame} className="restart-button" style={{marginTop: '10px'}}>
-                Play Again
-              </button>
-              <button 
-                onClick={() => setShowLeaderboard(true)}
-                className="restart-button"
-                style={{marginTop: '10px'}}
-              >
-                View Leaderboard
-              </button>
-              <button 
-                onClick={() => {
-                  setGameOver(false);
-                  setGameStarted(false);
-                  setSnake(INITIAL_SNAKE);
-                  setScore(0);
-                }} 
-                className="cancel-button"
-                style={{marginTop: '15px'}}
-              >
-                Cancel
-              </button>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '300px'}}>
+                <button 
+                  onClick={() => {
+                    saveScoreToLeaderboard(playerName, score);
+                    setPlayerName('');
+                    setShowLeaderboard(true);
+                  }}
+                  className="restart-button"
+                >
+                  💾 Save Score
+                </button>
+                <button onClick={resetGame} className="restart-button">
+                  🔄 Play Again
+                </button>
+                <button 
+                  onClick={() => setShowLeaderboard(true)}
+                  className="restart-button"
+                >
+                  🏆 View Leaderboard
+                </button>
+                <button 
+                  onClick={() => {
+                    setGameOver(false);
+                    setGameStarted(false);
+                    setSnake(INITIAL_SNAKE);
+                    setScore(0);
+                  }} 
+                  className="cancel-button"
+                >
+                  ❌ Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
