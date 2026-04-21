@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
+import { database } from './firebase';
+import { ref, push, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 20;
@@ -30,8 +32,31 @@ function App() {
   const [allOptions, setAllOptions] = useState(POKEMON_OPTIONS);
   const [showJumpscare, setShowJumpscare] = useState(false);
   const [speed, setSpeed] = useState(INITIAL_SPEED);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [playerName, setPlayerName] = useState('');
   const directionRef = useRef(INITIAL_DIRECTION);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    // Load leaderboard from Firebase
+    const leaderboardRef = ref(database, 'leaderboard');
+    const leaderboardQuery = query(leaderboardRef, orderByChild('score'), limitToLast(10));
+    
+    const unsubscribe = onValue(leaderboardQuery, (snapshot) => {
+      const scores = [];
+      snapshot.forEach((childSnapshot) => {
+        scores.push({
+          id: childSnapshot.key,
+          ...childSnapshot.val()
+        });
+      });
+      // Reverse to show highest scores first
+      setLeaderboard(scores.reverse());
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     fetch('/heads/heads-config.json')
@@ -113,6 +138,33 @@ function App() {
       setDirection(newDirection);
       directionRef.current = newDirection;
     }
+  };
+
+  const saveScoreToLeaderboard = (name, finalScore) => {
+    const newEntry = {
+      name: name || 'Anonymous',
+      score: finalScore,
+      date: new Date().toLocaleDateString(),
+      timestamp: Date.now(),
+      character: selectedPokemon?.name || 'Unknown'
+    };
+
+    // Save to Firebase
+    const leaderboardRef = ref(database, 'leaderboard');
+    push(leaderboardRef, newEntry)
+      .then(() => {
+        console.log('Score saved to Firebase!');
+      })
+      .catch((error) => {
+        console.error('Error saving score:', error);
+        // Fallback to localStorage if Firebase fails
+        const savedLeaderboard = localStorage.getItem('snakeGameLeaderboard');
+        const localScores = savedLeaderboard ? JSON.parse(savedLeaderboard) : [];
+        const updatedLocal = [...localScores, newEntry]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10);
+        localStorage.setItem('snakeGameLeaderboard', JSON.stringify(updatedLocal));
+      });
   };
 
   const resetGame = useCallback(() => {
@@ -227,6 +279,12 @@ function App() {
           >
             Change Your Character
           </button>
+          <button 
+            className="pokemon-selector-btn"
+            onClick={() => setShowLeaderboard(true)}
+          >
+            🏆 Leaderboard
+          </button>
         </div>
 
         {showPokemonMenu && (
@@ -328,7 +386,7 @@ function App() {
         {!gameStarted && selectedPokemon && (
           <div className="overlay">
             <div className="message">
-              <h2>Welcome to Pokemon Sake!</h2>
+              <h2>Welcome to Pokemon Snnpake!</h2>
               {!showPokemonMenu ? (
                 <>
                   <p>Choose your snake head:</p>
@@ -369,8 +427,33 @@ function App() {
             <div className="message">
               <h2>Game Over!</h2>
               <p>Final Score: {score}</p>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                className="name-input"
+                maxLength={15}
+              />
+              <button 
+                onClick={() => {
+                  saveScoreToLeaderboard(playerName, score);
+                  setPlayerName('');
+                  setShowLeaderboard(true);
+                }}
+                className="restart-button"
+                style={{marginTop: '10px'}}
+              >
+                Save Score
+              </button>
               <button onClick={resetGame} className="restart-button">
                 Play Again
+              </button>
+              <button 
+                onClick={() => setShowLeaderboard(true)}
+                className="restart-button"
+              >
+                View Leaderboard
               </button>
               <button 
                 onClick={() => {
@@ -435,6 +518,35 @@ function App() {
         <div className="instructions">
           <p>🎮 Arrow keys to move • SPACE to pause</p>
         </div>
+
+        {showLeaderboard && (
+          <div className="overlay">
+            <div className="leaderboard-modal">
+              <h2>🏆 Leaderboard</h2>
+              {leaderboard.length > 0 ? (
+                <div className="leaderboard-list">
+                  {leaderboard.map((entry, index) => (
+                    <div key={index} className="leaderboard-entry">
+                      <span className="rank">#{index + 1}</span>
+                      <span className="player-name">{entry.name}</span>
+                      <span className="player-score">{entry.score}</span>
+                      <span className="player-char">{entry.character}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-scores">No scores yet! Be the first to play!</p>
+              )}
+              <button 
+                onClick={() => setShowLeaderboard(false)}
+                className="cancel-button"
+                style={{marginTop: '20px'}}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="watermark">
           <img src="/logo.gif" alt="Logo" className="watermark-logo" />

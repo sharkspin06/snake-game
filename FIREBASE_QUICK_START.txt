@@ -1,0 +1,49 @@
+🔥 FIREBASE QUICK START - 5 MINUTES SETUP
+
+1. CREATE PROJECT
+   → https://console.firebase.google.com/
+   → Click "Add project"
+   → Name: snake-game
+   → Create
+
+2. ENABLE DATABASE
+   → Build → Realtime Database
+   → Create Database
+   → Test mode
+   → Enable
+
+3. GET CONFIG
+   → Settings ⚙️ → Project settings
+   → Your apps → Web </> icon
+   → Copy firebaseConfig { ... }
+
+4. UPDATE CODE
+   → Open: src/firebase.js
+   → Paste your config (replace the placeholder)
+
+5. SET RULES
+   → Database → Rules tab
+   → Paste:
+   {
+     "rules": {
+       "leaderboard": {
+         ".read": true,
+         ".write": true
+       }
+     }
+   }
+   → Publish
+
+6. TEST
+   → npm run dev
+   → Play game, save score
+   → Check Firebase Console → Data
+
+7. DEPLOY
+   → git add .
+   → git commit -m "Add Firebase"
+   → git push
+
+DONE! 🎉 Global leaderboard is live!
+
+Full guide: See FIREBASE_SETUP.md

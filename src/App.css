@@ -597,6 +597,147 @@ body {
   color: #888;
 }
 
+.name-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 12px 20px;
+  margin: 15px 0;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  border: 3px solid #8B0000;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.name-input:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.name-input::placeholder {
+  color: #999;
+  font-size: 0.6rem;
+}
+
+@media (max-width: 768px) {
+  .name-input {
+    font-size: 0.55rem;
+    padding: 10px 15px;
+  }
+}
+
+.leaderboard-modal {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.leaderboard-modal h2 {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 1.2rem;
+  color: #8B0000;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .leaderboard-modal h2 {
+    font-size: 0.9rem;
+  }
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leaderboard-entry {
+  display: grid;
+  grid-template-columns: 50px 1fr 80px 100px;
+  gap: 10px;
+  padding: 12px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid #8B0000;
+  align-items: center;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.6rem;
+  transition: transform 0.2s;
+}
+
+.leaderboard-entry:hover {
+  transform: translateX(5px);
+  background: #f0f0f0;
+}
+
+.leaderboard-entry:nth-child(1) {
+  border-left-color: #FFD700;
+  background: linear-gradient(135deg, #FFF9E6 0%, #f9f9f9 100%);
+}
+
+.leaderboard-entry:nth-child(2) {
+  border-left-color: #C0C0C0;
+}
+
+.leaderboard-entry:nth-child(3) {
+  border-left-color: #CD7F32;
+}
+
+.rank {
+  font-weight: bold;
+  color: #8B0000;
+}
+
+.player-name {
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-score {
+  color: #FFD700;
+  font-weight: bold;
+  text-align: right;
+}
+
+.player-char {
+  color: #666;
+  font-size: 0.5rem;
+  text-align: right;
+}
+
+.no-scores {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  color: #999;
+  text-align: center;
+  padding: 40px 20px;
+  line-height: 1.8;
+}
+
+@media (max-width: 768px) {
+  .leaderboard-entry {
+    grid-template-columns: 40px 1fr 60px;
+    font-size: 0.45rem;
+    padding: 10px;
+  }
+  
+  .player-char {
+    display: none;
+  }
+}
+
 .watermark {
   margin-top: 15px;
   text-align: center;
