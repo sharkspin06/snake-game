@@ -386,7 +386,7 @@ function App() {
         {!gameStarted && selectedPokemon && (
           <div className="overlay">
             <div className="message">
-              <h2>Welcome to Pokemon Snnpake!</h2>
+              <h2>Welcome to Pokemon Snake!</h2>
               {!showPokemonMenu ? (
                 <>
                   <p>Choose your snake head:</p>
@@ -446,12 +446,13 @@ function App() {
               >
                 Save Score
               </button>
-              <button onClick={resetGame} className="restart-button">
+              <button onClick={resetGame} className="restart-button" style={{marginTop: '10px'}}>
                 Play Again
               </button>
               <button 
                 onClick={() => setShowLeaderboard(true)}
                 className="restart-button"
+                style={{marginTop: '10px'}}
               >
                 View Leaderboard
               </button>
