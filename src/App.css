@@ -217,7 +217,7 @@ body {
   position: relative;
   z-index: 200;
   max-width: 700px;
-  margin: 0 auto;
+  margin: -80px auto 0;
 }
 
 @media (max-width: 768px) {
@@ -268,14 +268,20 @@ body {
   justify-content: center;
   gap: 10px;
   padding: 25px 15px;
-  background: white;
-  border: 4px solid #333;
-  border-radius: 8px;
+  background: white !important;
+  border: 0;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 0px #222;
+  transition: none;
+  box-shadow: 
+    inset 3px 3px 0px rgba(255, 255, 255, 0.4),
+    inset -3px -3px 0px rgba(0, 0, 0, 0.4),
+    4px 4px 0px #000;
   min-height: 140px;
   position: relative;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
 @media (max-width: 768px) {
@@ -286,20 +292,29 @@ body {
 }
 
 .pokemon-option:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 0px #222;
+  background: #fffacd !important;
+  transform: translate(-2px, -2px);
+  box-shadow: 
+    inset 3px 3px 0px rgba(255, 255, 255, 0.6),
+    inset -3px -3px 0px rgba(0, 0, 0, 0.3),
+    6px 6px 0px #000,
+    0 0 20px rgba(255, 215, 0, 0.5);
 }
 
 .pokemon-option:active {
-  transform: translateY(2px);
-  box-shadow: 0 2px 0px #222;
+  transform: translate(2px, 2px);
+  box-shadow: 
+    inset 3px 3px 0px rgba(0, 0, 0, 0.4),
+    inset -3px -3px 0px rgba(255, 255, 255, 0.2),
+    2px 2px 0px #000;
 }
 
 .pokemon-option.selected {
-  border-width: 4px;
   background: #FFD700;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transform: scale(1.05);
+  box-shadow: 
+    inset 3px 3px 0px rgba(255, 255, 255, 0.6),
+    inset -3px -3px 0px rgba(0, 0, 0, 0.4),
+    4px 4px 0px #000;
 }
 
 .pokemon-emoji {
@@ -358,7 +373,7 @@ body {
   box-shadow: 
     inset 2px 2px 0px rgba(255, 255, 255, 0.3),
     inset -2px -2px 0px rgba(0, 0, 0, 0.3);
-  transition: all 0.05s linear;
+  transition: top 0.1s linear, left 0.1s linear;
 }
 
 .snake-head {
@@ -622,6 +637,8 @@ body {
   font-weight: bold;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
   position: relative;
   box-shadow: 
     inset 3px 3px 0px rgba(255, 255, 255, 0.4),

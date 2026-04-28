@@ -17,17 +17,22 @@ const POKEMON_OPTIONS = [
 ];
 
 const BOARD_THEMES = [
-  { id: 'classic', name: 'Classic Dark', bgColor: '#1a1a1a', bgImage: null, gridColor: 'rgba(0, 255, 0, 0.3)', snakeColor: '#4CAF50', foodColor: '#FF5252' },
   { id: 'grass', name: 'Grass Field', bgColor: '#1e3a20', bgImage: '/themes/grass.png', gridColor: 'rgba(255, 255, 255, 0.4)', snakeColor: '#7cb342', foodColor: '#ff6f00' },
+  { id: 'greenarena', name: 'Green Arena', bgColor: '#2d5016', bgImage: '/themes/greenarena.png', gridColor: 'rgba(255, 255, 255, 0.3)', snakeColor: '#8bc34a', foodColor: '#ffeb3b' },
   { id: 'dragon', name: 'Dragon Cave', bgColor: '#3d1e1e', bgImage: '/themes/dragon.png', gridColor: 'rgba(255, 100, 0, 0.4)', snakeColor: '#ff6b6b', foodColor: '#ffd93d' },
   { id: 'purple', name: 'Purple Dream', bgColor: '#2d1b3d', bgImage: '/themes/purple.png', gridColor: 'rgba(200, 100, 255, 0.4)', snakeColor: '#9b59b6', foodColor: '#f39c12' },
   { id: 'fairy', name: 'Fairy Garden', bgColor: '#4a1a3d', bgImage: '/themes/fairy.png', gridColor: 'rgba(255, 192, 203, 0.4)', snakeColor: '#ff69b4', foodColor: '#ffd700' },
   { id: 'brown', name: 'Earth Ground', bgColor: '#3d2a1e', bgImage: '/themes/brown.png', gridColor: 'rgba(139, 90, 43, 0.5)', snakeColor: '#8b6f47', foodColor: '#ff8c00' },
+  { id: 'cloud', name: 'Cloud Sky', bgColor: '#87ceeb', bgImage: '/themes/cloud.png', gridColor: 'rgba(255, 255, 255, 0.5)', snakeColor: '#4fc3f7', foodColor: '#ffeb3b' },
+  { id: 'ice', name: 'Ice World', bgColor: '#e0f7fa', bgImage: '/themes/ice.png', gridColor: 'rgba(0, 188, 212, 0.4)', snakeColor: '#00bcd4', foodColor: '#ff5722' },
+  { id: 'punk', name: 'Punk Rock', bgColor: '#1a1a1a', bgImage: '/themes/punk.png', gridColor: 'rgba(255, 0, 255, 0.5)', snakeColor: '#e91e63', foodColor: '#00ff00' },
 ];
 
 function App() {
   const [snake, setSnake] = useState(INITIAL_SNAKE);
   const [food, setFood] = useState({ x: 15, y: 15 });
+  const [goldenFood, setGoldenFood] = useState(null);
+  const [lastWasGolden, setLastWasGolden] = useState(false);
   const [direction, setDirection] = useState(INITIAL_DIRECTION);
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
@@ -43,16 +48,16 @@ function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [playerName, setPlayerName] = useState('');
-  const [selectedTheme, setSelectedTheme] = useState(BOARD_THEMES[0]);
+  const [selectedTheme, setSelectedTheme] = useState(BOARD_THEMES[1]);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(true);
   const [showGameOverFlash, setShowGameOverFlash] = useState(false);
   const directionRef = useRef(INITIAL_DIRECTION);
-  const fileInputRef = useRef(null);
   const audioRef = useRef(null);
   const gameOverSoundRef = useRef(null);
   const clickSoundRef = useRef(null);
   const biteSoundRef = useRef(null);
+  const goldenBiteSoundRef = useRef(null);
   const hoverSoundRef = useRef(null);
 
   useEffect(() => {
@@ -111,7 +116,7 @@ function App() {
       });
   }, []);
 
-  const generateFood = useCallback((currentSnake) => {
+  const generateFood = useCallback((currentSnake, preventGolden = false) => {
     let newFood;
     do {
       newFood = {
@@ -121,31 +126,18 @@ function App() {
     } while (
       currentSnake.some(segment => segment.x === newFood.x && segment.y === newFood.y)
     );
-    return newFood;
-  }, []);
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const fileName = file.name.replace(/\.(svg|png|jpg|jpeg|gif|webp)$/i, '');
-        setCustomSvg(e.target.result);
-        setCustomSvgName(fileName);
-        setSelectedPokemon({
-          id: 'custom',
-          name: fileName,
-          emoji: null,
-          color: '#9333ea',
-          svgData: e.target.result
-        });
-        setShowPokemonMenu(false);
-      };
-      reader.readAsDataURL(file);
+    
+    // 10% chance to spawn golden pokeball (but not if last one was golden)
+    if (!preventGolden && Math.random() < 0.1) {
+      setGoldenFood(newFood);
+      setLastWasGolden(true);
+      return null; // No regular food when golden appears
     } else {
-      alert('Please upload a valid image file (PNG, JPG, SVG, etc.)');
+      setGoldenFood(null);
+      setLastWasGolden(false);
+      return newFood;
     }
-  };
+  }, []);
 
   const handleDirectionChange = (newDirection) => {
     if (
@@ -226,23 +218,13 @@ function App() {
         return prevSnake;
       }
 
-      const newSnake = [newHead, ...prevSnake];
-      const ateFood = newHead.x === food.x && newHead.y === food.y;
-
-      if (ateFood) {
-        // Play bite sound
-        if (biteSoundRef.current) {
-          biteSoundRef.current.currentTime = 0;
-          biteSoundRef.current.play().catch(err => console.log('Bite sound failed:', err));
-        }
-        setScore(prev => prev + 10);
-        setFood(generateFood(newSnake));
-      } else {
-        newSnake.pop();
-      }
-
-      // Check self-collision (exclude the tail that was just removed if not eating)
-      const bodyToCheck = ateFood ? prevSnake : prevSnake.slice(0, -1);
+      // Check if eating regular or golden food
+      const ateRegularFood = food && newHead.x === food.x && newHead.y === food.y;
+      const ateGoldenFood = goldenFood && newHead.x === goldenFood.x && newHead.y === goldenFood.y;
+      const ateAnyFood = ateRegularFood || ateGoldenFood;
+      
+      // Check self-collision (exclude tail if not eating food, as it will move)
+      const bodyToCheck = ateAnyFood ? prevSnake : prevSnake.slice(0, -1);
       if (bodyToCheck.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
         // Play game over sound
         if (gameOverSoundRef.current) {
@@ -257,9 +239,36 @@ function App() {
         return prevSnake;
       }
 
+      let newSnake = [newHead, ...prevSnake];
+
+      if (ateRegularFood) {
+        // Play bite sound
+        if (biteSoundRef.current) {
+          biteSoundRef.current.currentTime = 0;
+          biteSoundRef.current.play().catch(err => console.log('Bite sound failed:', err));
+        }
+        setScore(prev => prev + 10);
+        const newFood = generateFood(newSnake, false);
+        setFood(newFood);
+      } else if (ateGoldenFood) {
+        // Play golden bite sound
+        if (goldenBiteSoundRef.current) {
+          goldenBiteSoundRef.current.currentTime = 0;
+          goldenBiteSoundRef.current.play().catch(err => console.log('Golden bite sound failed:', err));
+        }
+        setScore(prev => prev + 30);
+        // Add 2 more segments (total 3 with the one already added)
+        newSnake = [newHead, ...prevSnake, prevSnake[prevSnake.length - 1], prevSnake[prevSnake.length - 1]];
+        // Prevent golden from appearing again immediately
+        const newFood = generateFood(newSnake, true);
+        setFood(newFood);
+      } else {
+        newSnake.pop();
+      }
+
       return newSnake;
     });
-  }, [gameOver, isPaused, gameStarted, food, generateFood]);
+  }, [gameOver, isPaused, gameStarted, food, goldenFood, generateFood]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -381,13 +390,21 @@ function App() {
           <source src="/sounds/bite.wav" type="audio/wav" />
         </audio>
 
+        <audio ref={goldenBiteSoundRef}>
+          <source src="/sounds/goldenbite.wav" type="audio/wav" />
+        </audio>
+
         <audio ref={hoverSoundRef} preload="auto">
           <source src="/sounds/hover.wav" type="audio/wav" />
         </audio>
 
         {showThemeMenu && (
           <div className="pokemon-menu">
-            <h3>Choose Board Theme</h3>
+            <h3 style={{
+              fontFamily: "'Press Start 2P', cursive",
+              color: '#FFCB05',
+              textShadow: '3px 3px 0px #3D7DCA, -2px -2px 0px #3D7DCA, 2px -2px 0px #3D7DCA, -2px 2px 0px #3D7DCA, 2px 2px 0px #3D7DCA'
+            }}>Choose Board Theme</h3>
             <div className="pokemon-grid">
               {BOARD_THEMES.map(theme => (
                 <button
@@ -446,28 +463,34 @@ function App() {
                 </button>
               ))}
             </div>
-            <button 
-              onClick={() => setShowThemeMenu(false)}
-              className="cancel-button"
-              style={{marginTop: '15px'}}
-            >
-              Close
-            </button>
+            <img 
+              src="/buttons/close.gif"
+              alt="Close"
+              onClick={() => { playClickSound(); setShowThemeMenu(false); }}
+              onMouseEnter={playHoverSound}
+              style={{cursor: 'pointer', width: '100%', maxWidth: '250px', marginTop: '15px', display: 'block', marginLeft: 'auto', marginRight: 'auto'}}
+            />
           </div>
         )}
 
         {showPokemonMenu && (
           <div className="pokemon-menu">
-            <h3>Choose Your Pokemon</h3>
+            <h3 style={{
+              fontFamily: "'Press Start 2P', cursive",
+              color: '#FFCB05',
+              textShadow: '3px 3px 0px #3D7DCA, -2px -2px 0px #3D7DCA, 2px -2px 0px #3D7DCA, -2px 2px 0px #3D7DCA, 2px 2px 0px #3D7DCA'
+            }}>Choose Your Pokemon</h3>
             <div className="pokemon-grid">
               {allOptions.map(pokemon => (
                 <button
                   key={pokemon.id}
                   className={`pokemon-option ${selectedPokemon?.id === pokemon.id ? 'selected' : ''}`}
                   onClick={() => {
+                    playClickSound();
                     setSelectedPokemon(pokemon);
                     setShowPokemonMenu(false);
                   }}
+                  onMouseEnter={playHoverSound}
                   style={{ borderColor: pokemon.color }}
                 >
                   {pokemon.svgData ? (
@@ -478,28 +501,14 @@ function App() {
                   <span className="pokemon-name">{pokemon.name}</span>
                 </button>
               ))}
-              <button
-                className={`pokemon-option upload-option ${selectedPokemon.id === 'custom' ? 'selected' : ''}`}
-                onClick={() => fileInputRef.current?.click()}
-                style={{ borderColor: '#9333ea' }}
-              >
-                <span className="pokemon-emoji">📤</span>
-                <span className="pokemon-name">Upload Image</span>
-              </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              style={{ display: 'none' }}
+            <img 
+              src="/buttons/cancel.gif"
+              alt="Cancel"
+              onClick={() => { playClickSound(); setShowPokemonMenu(false); }}
+              onMouseEnter={playHoverSound}
+              style={{cursor: 'pointer', width: '100%', maxWidth: '250px', marginTop: '15px', display: 'block', marginLeft: 'auto', marginRight: 'auto'}}
             />
-            <button 
-              className="cancel-button"
-              onClick={() => setShowPokemonMenu(false)}
-            >
-              Cancel
-            </button>
           </div>
         )}
 
@@ -554,19 +563,37 @@ function App() {
               )}
             </div>
           ))}
-          <div
-            className="food"
-            style={{
-              left: food.x * CELL_SIZE,
-              top: food.y * CELL_SIZE,
-              width: CELL_SIZE,
-              height: CELL_SIZE,
-              backgroundImage: 'url(/pokeball.png)',
-              backgroundSize: 'contain',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-            }}
-          />
+          {food && (
+            <div
+              className="food"
+              style={{
+                left: food.x * CELL_SIZE,
+                top: food.y * CELL_SIZE,
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+                backgroundImage: 'url(/pokeball.png)',
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+          )}
+          {goldenFood && (
+            <div
+              className="food"
+              style={{
+                left: goldenFood.x * CELL_SIZE,
+                top: goldenFood.y * CELL_SIZE,
+                width: CELL_SIZE,
+                height: CELL_SIZE,
+                backgroundImage: 'url(/goldpokeball.png)',
+                backgroundSize: 'contain',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                filter: 'drop-shadow(0 0 8px gold)',
+              }}
+            />
+          )}
         </div>
 
         {!gameStarted && selectedPokemon && (
@@ -738,7 +765,8 @@ function App() {
           <div className="control-row">
             <button 
               className="control-btn"
-              onClick={() => handleDirectionChange({ x: 0, y: -1 })}
+              onTouchStart={(e) => { e.preventDefault(); handleDirectionChange({ x: 0, y: -1 }); }}
+              onMouseDown={(e) => { e.preventDefault(); handleDirectionChange({ x: 0, y: -1 }); }}
               disabled={!gameStarted || gameOver}
             >
               ▲
@@ -747,21 +775,24 @@ function App() {
           <div className="control-row">
             <button 
               className="control-btn"
-              onClick={() => handleDirectionChange({ x: -1, y: 0 })}
+              onTouchStart={(e) => { e.preventDefault(); handleDirectionChange({ x: -1, y: 0 }); }}
+              onMouseDown={(e) => { e.preventDefault(); handleDirectionChange({ x: -1, y: 0 }); }}
               disabled={!gameStarted || gameOver}
             >
               ◄
             </button>
             <button 
               className="control-btn"
-              onClick={() => handleDirectionChange({ x: 0, y: 1 })}
+              onTouchStart={(e) => { e.preventDefault(); handleDirectionChange({ x: 0, y: 1 }); }}
+              onMouseDown={(e) => { e.preventDefault(); handleDirectionChange({ x: 0, y: 1 }); }}
               disabled={!gameStarted || gameOver}
             >
               ▼
             </button>
             <button 
               className="control-btn"
-              onClick={() => handleDirectionChange({ x: 1, y: 0 })}
+              onTouchStart={(e) => { e.preventDefault(); handleDirectionChange({ x: 1, y: 0 }); }}
+              onMouseDown={(e) => { e.preventDefault(); handleDirectionChange({ x: 1, y: 0 }); }}
               disabled={!gameStarted || gameOver}
             >
               ►
@@ -773,7 +804,11 @@ function App() {
         {showLeaderboard && (
           <div className="overlay">
             <div className="leaderboard-modal">
-              <h2>🏆 Leaderboard</h2>
+              <h2 style={{
+                fontFamily: "'Press Start 2P', cursive",
+                color: '#FFCB05',
+                textShadow: '3px 3px 0px #3D7DCA, -2px -2px 0px #3D7DCA, 2px -2px 0px #3D7DCA, -2px 2px 0px #3D7DCA, 2px 2px 0px #3D7DCA'
+              }}>Leaderboard</h2>
               {leaderboard.length > 0 ? (
                 <div className="leaderboard-list">
                   {leaderboard.map((entry, index) => (
@@ -788,13 +823,13 @@ function App() {
               ) : (
                 <p className="no-scores">No scores yet! Be the first to play!</p>
               )}
-              <button 
-                onClick={() => setShowLeaderboard(false)}
-                className="cancel-button"
-                style={{marginTop: '20px'}}
-              >
-                Close
-              </button>
+              <img 
+                src="/buttons/cancel.gif"
+                alt="Close"
+                onClick={() => { playClickSound(); setShowLeaderboard(false); }}
+                onMouseEnter={playHoverSound}
+                style={{cursor: 'pointer', width: '100%', maxWidth: '250px', marginTop: '20px', display: 'block', marginLeft: 'auto', marginRight: 'auto'}}
+              />
             </div>
           </div>
         )}
@@ -840,7 +875,18 @@ function App() {
         )}
 
         <div className="watermark">
-          <img src="/logo.gif" alt="Logo" className="watermark-logo" />
+        </div>
+        
+        <div style={{
+          textAlign: 'center',
+          marginTop: '20px',
+          fontFamily: "'Press Start 2P', cursive",
+          fontSize: '0.5rem',
+          color: '#FFCB05',
+          textShadow: '2px 2px 0px #3D7DCA, -1px -1px 0px #3D7DCA',
+          padding: '10px'
+        }}>
+          © 2026 SnakeGameNitruman by PJ Valencia
         </div>
       </div>
     </div>
