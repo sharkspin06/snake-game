@@ -16,6 +16,15 @@ const POKEMON_OPTIONS = [
   { id: 'jigglypuff', name: 'Jigglypuff', emoji: '🎵', color: '#FF69B4' },
 ];
 
+const BOARD_THEMES = [
+  { id: 'classic', name: 'Classic Dark', bgColor: '#1a1a1a', bgImage: null, gridColor: 'rgba(0, 255, 0, 0.3)', snakeColor: '#4CAF50', foodColor: '#FF5252' },
+  { id: 'grass', name: 'Grass Field', bgColor: '#1e3a20', bgImage: '/themes/grass.png', gridColor: 'rgba(255, 255, 255, 0.4)', snakeColor: '#7cb342', foodColor: '#ff6f00' },
+  { id: 'dragon', name: 'Dragon Cave', bgColor: '#3d1e1e', bgImage: '/themes/dragon.png', gridColor: 'rgba(255, 100, 0, 0.4)', snakeColor: '#ff6b6b', foodColor: '#ffd93d' },
+  { id: 'purple', name: 'Purple Dream', bgColor: '#2d1b3d', bgImage: '/themes/purple.png', gridColor: 'rgba(200, 100, 255, 0.4)', snakeColor: '#9b59b6', foodColor: '#f39c12' },
+  { id: 'fairy', name: 'Fairy Garden', bgColor: '#4a1a3d', bgImage: '/themes/fairy.png', gridColor: 'rgba(255, 192, 203, 0.4)', snakeColor: '#ff69b4', foodColor: '#ffd700' },
+  { id: 'brown', name: 'Earth Ground', bgColor: '#3d2a1e', bgImage: '/themes/brown.png', gridColor: 'rgba(139, 90, 43, 0.5)', snakeColor: '#8b6f47', foodColor: '#ff8c00' },
+];
+
 function App() {
   const [snake, setSnake] = useState(INITIAL_SNAKE);
   const [food, setFood] = useState({ x: 15, y: 15 });
@@ -30,13 +39,21 @@ function App() {
   const [customSvgName, setCustomSvgName] = useState('');
   const [loadedHeads, setLoadedHeads] = useState([]);
   const [allOptions, setAllOptions] = useState(POKEMON_OPTIONS);
-  const [showJumpscare, setShowJumpscare] = useState(false);
   const [speed, setSpeed] = useState(INITIAL_SPEED);
   const [leaderboard, setLeaderboard] = useState([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [playerName, setPlayerName] = useState('');
+  const [selectedTheme, setSelectedTheme] = useState(BOARD_THEMES[0]);
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const [showGameOverFlash, setShowGameOverFlash] = useState(false);
   const directionRef = useRef(INITIAL_DIRECTION);
   const fileInputRef = useRef(null);
+  const audioRef = useRef(null);
+  const gameOverSoundRef = useRef(null);
+  const clickSoundRef = useRef(null);
+  const biteSoundRef = useRef(null);
+  const hoverSoundRef = useRef(null);
 
   useEffect(() => {
     // Load leaderboard from Firebase
@@ -196,9 +213,14 @@ function App() {
         newHead.y >= GRID_SIZE ||
         prevSnake.some(segment => segment.x === newHead.x && segment.y === newHead.y)
       ) {
-        setShowJumpscare(true);
+        // Play game over sound
+        if (gameOverSoundRef.current) {
+          gameOverSoundRef.current.play().catch(err => console.log('Sound play failed:', err));
+        }
+        // Show flash
+        setShowGameOverFlash(true);
         setTimeout(() => {
-          setShowJumpscare(false);
+          setShowGameOverFlash(false);
           setGameOver(true);
         }, 2000);
         return prevSnake;
@@ -207,6 +229,11 @@ function App() {
       const newSnake = [newHead, ...prevSnake];
 
       if (newHead.x === food.x && newHead.y === food.y) {
+        // Play bite sound
+        if (biteSoundRef.current) {
+          biteSoundRef.current.currentTime = 0;
+          biteSoundRef.current.play().catch(err => console.log('Bite sound failed:', err));
+        }
         setScore(prev => prev + 10);
         setFood(generateFood(newSnake));
       } else {
@@ -264,28 +291,153 @@ function App() {
     setSpeed(newSpeed);
   }, [snake.length]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicPlaying && !isPaused) {
+        audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPaused, isMusicPlaying]);
+
+  useEffect(() => {
+    // Try to play music on first user interaction
+    const playMusic = () => {
+      if (audioRef.current && isMusicPlaying) {
+        audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+      }
+    };
+
+    // Add event listeners for user interaction
+    document.addEventListener('click', playMusic, { once: true });
+    document.addEventListener('keydown', playMusic, { once: true });
+
+    return () => {
+      document.removeEventListener('click', playMusic);
+      document.removeEventListener('keydown', playMusic);
+    };
+  }, [isMusicPlaying]);
+
+  const toggleMusic = () => {
+    setIsMusicPlaying(!isMusicPlaying);
+  };
+
+  const playClickSound = () => {
+    if (clickSoundRef.current) {
+      clickSoundRef.current.currentTime = 0;
+      clickSoundRef.current.play().catch(err => console.log('Click sound failed:', err));
+    }
+  };
+
+  const playHoverSound = () => {
+    if (hoverSoundRef.current) {
+      hoverSoundRef.current.volume = 0.3;
+      hoverSoundRef.current.currentTime = 0;
+      hoverSoundRef.current.play().catch(err => console.log('Hover sound failed:', err));
+    }
+  };
+
   return (
     <div className="app">
       <div className="game-container">
-        <h1 className="title">Snake Game</h1>
-        
-        <div className="score-board">
-          <div className="score">Score: {score}</div>
-          <div className="high-score">Length: {snake.length}</div>
-          <button 
-            className="pokemon-selector-btn"
-            onClick={() => setShowPokemonMenu(!showPokemonMenu)}
-            disabled={false}
-          >
-            Change Your Character
-          </button>
-          <button 
-            className="pokemon-selector-btn"
-            onClick={() => setShowLeaderboard(true)}
-          >
-            🏆 Leaderboard
-          </button>
+        <div style={{display: 'flex', gap: '20px', justifyContent: 'center', marginBottom: '20px'}}>
+          <div className="score" style={{fontFamily: "'Press Start 2P', cursive", color: '#FFCB05', textShadow: '3px 3px 0px #3D7DCA, -1px -1px 0px #3D7DCA, 1px -1px 0px #3D7DCA, -1px 1px 0px #3D7DCA, 1px 1px 0px #3D7DCA'}}>Score: {score}</div>
+          <div className="high-score" style={{fontFamily: "'Press Start 2P', cursive", color: '#FFCB05', textShadow: '3px 3px 0px #3D7DCA, -1px -1px 0px #3D7DCA, 1px -1px 0px #3D7DCA, -1px 1px 0px #3D7DCA, 1px 1px 0px #3D7DCA'}}>Length: {snake.length}</div>
         </div>
+        <div className="score-board">
+        </div>
+
+        <audio ref={audioRef} loop>
+          <source src="/music/background.mp3" type="audio/mpeg" />
+        </audio>
+
+        <audio ref={gameOverSoundRef}>
+          <source src="/sounds/gameover.wav" type="audio/wav" />
+        </audio>
+
+        <audio ref={clickSoundRef}>
+          <source src="/sounds/click.flac" type="audio/flac" />
+        </audio>
+
+        <audio ref={biteSoundRef}>
+          <source src="/sounds/bite.wav" type="audio/wav" />
+        </audio>
+
+        <audio ref={hoverSoundRef} preload="auto">
+          <source src="/sounds/hover.wav" type="audio/wav" />
+        </audio>
+
+        {showThemeMenu && (
+          <div className="pokemon-menu">
+            <h3>Choose Board Theme</h3>
+            <div className="pokemon-grid">
+              {BOARD_THEMES.map(theme => (
+                <button
+                  key={theme.id}
+                  className={`pokemon-option ${selectedTheme?.id === theme.id ? 'selected' : ''}`}
+                  onClick={() => {
+                    setSelectedTheme(theme);
+                    setShowThemeMenu(false);
+                  }}
+                  style={{ 
+                    borderColor: theme.snakeColor,
+                    background: selectedTheme?.id === theme.id ? theme.snakeColor : 'white'
+                  }}
+                >
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    backgroundColor: theme.bgColor,
+                    backgroundImage: theme.bgImage 
+                      ? `
+                        linear-gradient(${theme.gridColor} 1px, transparent 1px),
+                        linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px),
+                        url('${theme.bgImage}')
+                      `
+                      : `
+                        linear-gradient(${theme.gridColor} 1px, transparent 1px),
+                        linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)
+                      `,
+                    backgroundSize: theme.bgImage ? '10px 10px, 10px 10px, cover' : '10px 10px, 10px 10px',
+                    backgroundPosition: theme.bgImage ? '0 0, 0 0, center' : '0 0, 0 0',
+                    borderRadius: '8px',
+                    border: `3px solid ${theme.snakeColor}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      background: theme.snakeColor,
+                      borderRadius: '2px'
+                    }}></div>
+                    <div style={{
+                      width: '10px',
+                      height: '10px',
+                      background: theme.foodColor,
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px'
+                    }}></div>
+                  </div>
+                  <span className="pokemon-name">{theme.name}</span>
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={() => setShowThemeMenu(false)}
+              className="cancel-button"
+              style={{marginTop: '15px'}}
+            >
+              Close
+            </button>
+          </div>
+        )}
 
         {showPokemonMenu && (
           <div className="pokemon-menu">
@@ -339,6 +491,19 @@ function App() {
           style={{
             width: GRID_SIZE * CELL_SIZE,
             height: GRID_SIZE * CELL_SIZE,
+            backgroundColor: selectedTheme.bgColor,
+            backgroundImage: selectedTheme.bgImage 
+              ? `
+                linear-gradient(${selectedTheme.gridColor} 1px, transparent 1px),
+                linear-gradient(90deg, ${selectedTheme.gridColor} 1px, transparent 1px),
+                url('${selectedTheme.bgImage}')
+              `
+              : `
+                linear-gradient(${selectedTheme.gridColor} 1px, transparent 1px),
+                linear-gradient(90deg, ${selectedTheme.gridColor} 1px, transparent 1px)
+              `,
+            backgroundSize: selectedTheme.bgImage ? '20px 20px, 20px 20px, cover' : '20px 20px, 20px 20px',
+            backgroundPosition: selectedTheme.bgImage ? '0 0, 0 0, center' : '0 0, 0 0',
           }}
         >
           {snake.map((segment, index) => (
@@ -350,7 +515,7 @@ function App() {
                 top: segment.y * CELL_SIZE,
                 width: CELL_SIZE,
                 height: CELL_SIZE,
-                background: index === 0 ? 'transparent' : undefined,
+                background: index === 0 ? 'transparent' : selectedTheme.snakeColor,
               }}
             >
               {index === 0 && selectedPokemon && (
@@ -379,6 +544,10 @@ function App() {
               top: food.y * CELL_SIZE,
               width: CELL_SIZE,
               height: CELL_SIZE,
+              backgroundImage: 'url(/pokeball.png)',
+              backgroundSize: 'contain',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
             }}
           />
         </div>
@@ -390,45 +559,50 @@ function App() {
               {!showPokemonMenu ? (
                 <>
                   <p>Choose your snake head:</p>
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '300px', alignItems: 'stretch', margin: '0 auto'}}>
-                    <button 
-                      onClick={() => setShowPokemonMenu(true)} 
-                      className="restart-button"
-                    >
-                      {selectedPokemon.svgData ? (
-                        <><img src={selectedPokemon.svgData} alt={selectedPokemon.name} style={{width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px'}} /> {selectedPokemon.name}</>
-                      ) : (
-                        <>{selectedPokemon.emoji} {selectedPokemon.name}</>
-                      )}
-                    </button>
-                    <button onClick={resetGame} className="restart-button">
-                      Start Game
-                    </button>
-                    <button 
-                      onClick={() => setShowLeaderboard(true)}
-                      className="restart-button"
-                    >
-                      🏆 View Leaderboard
-                    </button>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '15px', width: '100%', maxWidth: '280px', alignItems: 'center', margin: '0 auto'}}>
+                    <img 
+                      src="/buttons/character-btn.gif" 
+                      alt="Choose Character" 
+                      onClick={() => { playClickSound(); setShowPokemonMenu(true); }}
+                      onMouseEnter={playHoverSound}
+                      style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                    />
+                    <img 
+                      src="/buttons/start-game.gif" 
+                      alt="Start Game" 
+                      onClick={() => { playClickSound(); resetGame(); }}
+                      onMouseEnter={playHoverSound}
+                      style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                    />
+                    <img 
+                      src="/buttons/leaderboard.gif" 
+                      alt="View Leaderboard" 
+                      onClick={() => { playClickSound(); setShowLeaderboard(true); }}
+                      onMouseEnter={playHoverSound}
+                      style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                    />
+                    <img 
+                      src="/buttons/theme.gif" 
+                      alt="Change Theme" 
+                      onClick={() => { playClickSound(); setShowThemeMenu(true); }}
+                      onMouseEnter={playHoverSound}
+                      style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                    />
+                    <img 
+                      src={isMusicPlaying ? "/buttons/music-on.gif" : "/buttons/music-off.gif"}
+                      alt="Music Toggle" 
+                      onClick={() => { playClickSound(); toggleMusic(); }}
+                      onMouseEnter={playHoverSound}
+                      style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                    />
                   </div>
-                  <p className="controls" style={{marginTop: '15px'}}>Arrow keys to move • SPACE to pause</p>
                 </>
               ) : null}
             </div>
           </div>
         )}
 
-        {showJumpscare && (
-          <div className="jumpscare-overlay">
-            <img 
-              src="/gameover.gif" 
-              alt="Jumpscare" 
-              className="jumpscare-gif"
-            />
-          </div>
-        )}
-
-        {gameOver && !showJumpscare && (
+        {gameOver && (
           <div className="overlay">
             <div className="message">
               <h2>Game Over!</h2>
@@ -441,37 +615,53 @@ function App() {
                 className="name-input"
                 maxLength={15}
               />
-              <div style={{display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '300px'}}>
-                <button 
+              <div style={{display: 'flex', flexDirection: 'column', gap: '15px', width: '100%', maxWidth: '280px', alignItems: 'center', margin: '0 auto'}}>
+                <img 
+                  src="/buttons/save-score.gif" 
+                  alt="Save Score" 
                   onClick={() => {
+                    playClickSound();
                     saveScoreToLeaderboard(playerName, score);
                     setPlayerName('');
                     setShowLeaderboard(true);
                   }}
-                  className="restart-button"
-                >
-                  💾 Save Score
-                </button>
-                <button onClick={resetGame} className="restart-button">
-                  🔄 Play Again
-                </button>
-                <button 
-                  onClick={() => setShowLeaderboard(true)}
-                  className="restart-button"
-                >
-                  🏆 View Leaderboard
-                </button>
-                <button 
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/play-again.gif" 
+                  alt="Play Again" 
+                  onClick={() => { playClickSound(); resetGame(); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/leaderboard.gif" 
+                  alt="View Leaderboard" 
+                  onClick={() => { playClickSound(); setShowLeaderboard(true); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/theme.gif" 
+                  alt="Change Theme" 
+                  onClick={() => { playClickSound(); setShowThemeMenu(true); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/cancel.gif" 
+                  alt="Cancel" 
                   onClick={() => {
+                    playClickSound();
                     setGameOver(false);
                     setGameStarted(false);
                     setSnake(INITIAL_SNAKE);
                     setScore(0);
-                  }} 
-                  className="cancel-button"
-                >
-                  ❌ Cancel
-                </button>
+                  }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
               </div>
             </div>
           </div>
@@ -482,6 +672,47 @@ function App() {
             <div className="message">
               <h2>Paused</h2>
               <p>Press SPACE to continue</p>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '15px', width: '100%', maxWidth: '280px', alignItems: 'center', margin: '20px auto 0'}}>
+                <img 
+                  src="/buttons/resume.gif" 
+                  alt="Resume Game" 
+                  onClick={() => { playClickSound(); setIsPaused(false); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/leaderboard.gif" 
+                  alt="View Leaderboard" 
+                  onClick={() => { playClickSound(); setShowLeaderboard(true); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/theme.gif" 
+                  alt="Change Theme" 
+                  onClick={() => { playClickSound(); setShowThemeMenu(true); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src={isMusicPlaying ? "/buttons/music-on.gif" : "/buttons/music-off.gif"}
+                  alt="Music Toggle" 
+                  onClick={() => { playClickSound(); toggleMusic(); }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+                <img 
+                  src="/buttons/quit.gif" 
+                  alt="Quit Game" 
+                  onClick={() => {
+                    playClickSound();
+                    setGameOver(true);
+                    setIsPaused(false);
+                  }}
+                  onMouseEnter={playHoverSound}
+                  style={{cursor: 'pointer', width: '100%', maxWidth: '250px'}}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -521,9 +752,6 @@ function App() {
           </div>
         </div>
 
-        <div className="instructions">
-          <p>🎮 Arrow keys to move • SPACE to pause</p>
-        </div>
 
         {showLeaderboard && (
           <div className="overlay">
@@ -551,6 +779,43 @@ function App() {
                 Close
               </button>
             </div>
+          </div>
+        )}
+
+        {showGameOverFlash && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.9)'
+          }}>
+            <img 
+              src="/gameover.gif" 
+              alt="Game Over" 
+              style={{
+                maxWidth: '80%',
+                maxHeight: '60%',
+                objectFit: 'contain',
+                marginBottom: '30px'
+              }}
+            />
+            <h1 style={{
+              fontFamily: "'Press Start 2P', cursive",
+              fontSize: '3rem',
+              color: '#FFCB05',
+              textShadow: '4px 4px 0px #3D7DCA, -2px -2px 0px #3D7DCA, 2px -2px 0px #3D7DCA, -2px 2px 0px #3D7DCA, 2px 2px 0px #3D7DCA',
+              letterSpacing: '5px',
+              animation: 'pulse 0.5s ease-in-out infinite'
+            }}>
+              GAME OVER
+            </h1>
           </div>
         )}
 
