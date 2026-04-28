@@ -333,20 +333,20 @@ body {
 
 @media (max-width: 768px) {
   .game-board {
-    transform: scale(0.8);
+    transform: scale(0.95);
     transform-origin: center;
   }
 }
 
 @media (max-width: 480px) {
   .game-board {
-    transform: scale(0.65);
+    transform: scale(0.85);
   }
 }
 
 @media (max-width: 380px) {
   .game-board {
-    transform: scale(0.55);
+    transform: scale(0.75);
   }
 }
 

@@ -206,12 +206,12 @@ function App() {
         y: head.y + directionRef.current.y,
       };
 
+      // Check wall collision
       if (
         newHead.x < 0 ||
         newHead.x >= GRID_SIZE ||
         newHead.y < 0 ||
-        newHead.y >= GRID_SIZE ||
-        prevSnake.some(segment => segment.x === newHead.x && segment.y === newHead.y)
+        newHead.y >= GRID_SIZE
       ) {
         // Play game over sound
         if (gameOverSoundRef.current) {
@@ -227,8 +227,9 @@ function App() {
       }
 
       const newSnake = [newHead, ...prevSnake];
+      const ateFood = newHead.x === food.x && newHead.y === food.y;
 
-      if (newHead.x === food.x && newHead.y === food.y) {
+      if (ateFood) {
         // Play bite sound
         if (biteSoundRef.current) {
           biteSoundRef.current.currentTime = 0;
@@ -238,6 +239,22 @@ function App() {
         setFood(generateFood(newSnake));
       } else {
         newSnake.pop();
+      }
+
+      // Check self-collision (exclude the tail that was just removed if not eating)
+      const bodyToCheck = ateFood ? prevSnake : prevSnake.slice(0, -1);
+      if (bodyToCheck.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+        // Play game over sound
+        if (gameOverSoundRef.current) {
+          gameOverSoundRef.current.play().catch(err => console.log('Sound play failed:', err));
+        }
+        // Show flash
+        setShowGameOverFlash(true);
+        setTimeout(() => {
+          setShowGameOverFlash(false);
+          setGameOver(true);
+        }, 2000);
+        return prevSnake;
       }
 
       return newSnake;
@@ -812,7 +829,10 @@ function App() {
               color: '#FFCB05',
               textShadow: '4px 4px 0px #3D7DCA, -2px -2px 0px #3D7DCA, 2px -2px 0px #3D7DCA, -2px 2px 0px #3D7DCA, 2px 2px 0px #3D7DCA',
               letterSpacing: '5px',
-              animation: 'pulse 0.5s ease-in-out infinite'
+              animation: 'pulse 0.5s ease-in-out infinite',
+              textAlign: 'center',
+              margin: '0 auto',
+              width: '100%'
             }}>
               GAME OVER
             </h1>
